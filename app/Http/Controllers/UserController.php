@@ -18,10 +18,13 @@ class UserController extends Controller
             $signed_in = false;
         }
         $userData = session()->get('user');
-        // session()->forget('signed_in');
+        session()->save();
+
         $users = User::where('won', 1)->get();
-        $orderedUsers = $users->orderBy()
-        return response()->json(['signed_in' => $signed_in, 'users' => $users, 'userData' => $userData]);
+        $orderedUsers = $users->sortBy(function ($user) {
+            return $user->seconds_to_beat * $user->guesses;
+        });
+        return response()->json(['signed_in' => $signed_in, 'users' => $orderedUsers, 'userData' => $userData]);
     }
 
     public function set(Request $request) : JsonResponse
@@ -33,7 +36,7 @@ class UserController extends Controller
         $user->tries = $request->maxTries;
         $user->seconds = $request->maxSeconds;
         $user->save();
-        
+
         session()->put('signed_in', true);
         $signed_in = session()->get('signed_in');
         session()->put('user', $user);

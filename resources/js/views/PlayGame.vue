@@ -60,7 +60,7 @@ export default {
         gamedataApi.getUsers().then((res) => {
             if (!res.data.signed_in) {
                 router.push("/");
-            } else {
+            } else if (res.data.userData) {
                 this.gameData = res.data.userData;
             }
         });

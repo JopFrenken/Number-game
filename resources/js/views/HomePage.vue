@@ -89,7 +89,7 @@
             </tr>
         </thead>
         <tbody>
-            <tr v-for="(user, index) in sortedUsers" :key="index">
+            <tr v-for="(user, index) in users" :key="index">
                 <td class="px-3">{{ user.id }}</td>
                 <td class="px-3">{{ index + 1 }}</td>
                 <td class="px-3">{{ user.name }}</td>
@@ -122,14 +122,6 @@ export default {
             },
             users: [],
         };
-    },
-
-    computed: {
-        sortedUsers() {
-            return this.users.sort(
-                (a, b) => a.seconds_to_beat - b.seconds_to_beat
-            );
-        },
     },
 
     mounted() {
@@ -178,10 +170,12 @@ export default {
 
         getUsers() {
             gameDataApi.getUsers().then((res) => {
-                res.data.users.forEach((element) => {
-                    this.users.push(element);
-                    // console.log(this.users);
-                });
+                for (const key in res.data.users) {
+                    if (Object.hasOwnProperty.call(res.data.users, key)) {
+                        const element = res.data.users[key];
+                        this.users.push(element);
+                    }
+                }
             });
         },
     },
