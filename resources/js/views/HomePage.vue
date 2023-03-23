@@ -125,59 +125,61 @@ export default {
     },
 
     mounted() {
+        // removes modal backdrop on a new page
         if (document.querySelector(".modal-backdrop") != null) {
             document.querySelector(".modal-backdrop").remove();
         }
+
         this.getUsers();
-        let numberInputs = document.querySelectorAll('input[type="number"]');
-        numberInputs.forEach((input) => {
-            input.addEventListener("input", (e) => {
-                input.value = input.value.replace(/[^0-9]/g, "");
-            });
-        });
     },
 
     methods: {
+        // before starting the game, validates all inputs
         startGame() {
             const toast = useToast();
-            if (
-                !$("input").filter(function () {
-                    return $.trim(this.value) === "";
-                }).length
-            ) {
-                if ($(".min").val() >= 0) {
-                    if ($(".max").val() > $(".min").val()) {
-                        if ($(".tries").val() > 0 && $(".seconds").val() > 0) {
-                            gameDataApi.setUser(this.gameData).then((res) => {
-                                // console.log(res);
-                            });
-                            router.push("/game");
-                        } else {
-                            toast.error("The tries and/or seconds can't be 0.");
-                        }
-                    } else {
-                        toast.error(
-                            "Maximum can't be the same/equal as the minimum"
-                        );
-                    }
-                } else {
-                    toast.error("Minimum can't be less than 0");
-                }
-            } else {
-                toast.error("Please fill in the inputs.");
+            const nameVal = $(".name").val().trim();
+            const minVal = parseInt($(".min").val());
+            const maxVal = parseInt($(".max").val());
+            const triesVal = parseInt($(".tries").val());
+            const secondsVal = parseInt($(".seconds").val());
+
+            if (isNaN(minVal) || isNaN(maxVal) || isNaN(triesVal) || isNaN(secondsVal) || nameVal === "") {
+                toast.error("Please fill in all fields with valid values.");
+                return;
             }
+
+            if (minVal < 0) {
+                toast.error("Minimum can't be less than 0.");
+                return;
+            }
+
+            if (maxVal <= minVal) {
+                toast.error("Maximum must be greater than minimum.");
+                return;
+            }
+
+            if (triesVal <= 0 || secondsVal <= 0) {
+                toast.error("The tries and/or seconds can't be 0.");
+                return;
+            }
+
+            // if all is correct sets data in db and pushes the user to the correct route
+            gameDataApi.setUser(this.gameData);
+            router.push("/game");
         },
 
+        // gets all users and displays them in a table
         getUsers() {
             gameDataApi.getUsers().then((res) => {
                 for (const key in res.data.users) {
+                    // Check if the key is an actual property of the object 
                     if (Object.hasOwnProperty.call(res.data.users, key)) {
                         const element = res.data.users[key];
                         this.users.push(element);
                     }
                 }
             });
-        },
+        }
     },
 };
 </script>

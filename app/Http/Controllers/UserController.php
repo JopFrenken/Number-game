@@ -4,29 +4,45 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Session;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
 class UserController extends Controller
 {
-    public function get(Request $request) : JsonResponse
+    // get all users who have won the game, ordered by their score
+    public function get() : JsonResponse
     {
-        if (session()->has('signed_in')) {
-            $signed_in = session()->get('signed_in');
-        } else {
-            $signed_in = false;
-        }
-        $userData = session()->get('user');
-        session()->save();
-
         $users = User::where('won', 1)->get();
         $orderedUsers = $users->sortBy(function ($user) {
             return $user->seconds_to_beat * $user->guesses;
         });
-        return response()->json(['signed_in' => $signed_in, 'users' => $orderedUsers, 'userData' => $userData]);
+        return response()->json(['users' => $orderedUsers]);
     }
 
+    // Check if the user is signed in + sets the game data
+    public function getSession()
+    {
+        session_start();
+        if (isset($_SESSION['signed_in'])) {
+            $signed_in = $_SESSION['signed_in'];
+        } else {
+            $signed_in = false;
+        }
+
+        $userData = $_SESSION['user'] ?? null;
+        return response()->json(['signed_in' => $signed_in, 'userData' => $userData]);
+    }
+
+    // function for clearing the entire session
+    public function clearSession()
+    {
+        session_start();
+        session_unset();
+        session_destroy();
+
+        return response()->json('Session cleared');
+    }
+
+    // sets the user in the database
     public function set(Request $request) : JsonResponse
     {
         $user = new User();
@@ -37,36 +53,41 @@ class UserController extends Controller
         $user->seconds = $request->maxSeconds;
         $user->save();
 
-        session()->put('signed_in', true);
-        $signed_in = session()->get('signed_in');
-        session()->put('user', $user);
-        session()->put('answer', rand($request->minNumber, $request->maxNumber));
-        session()->save();
+        session_start();
+        $_SESSION['signed_in'] = true;
+        $signed_in = $_SESSION['signed_in'];
+        $_SESSION['user'] = $user;
+        $_SESSION['answer'] = rand($request->minNumber, $request->maxNumber);
+        session_write_close();
+
         return response()->json(['signed_in' => $signed_in]);
     }
 
+    // Checks the guessed number, sends lower/higher if not correct
     public function guess(Request $request)
     {
-        if (session()->get('answer') == intval($request->answer)) {
-            $user = session()->get('user');
+        session_start();
+        if ($_SESSION['answer'] == intval($request->answer)) {
+            $user = $_SESSION['user'];
             $user->won = 1;
             return response()->json(['msg' => 'Correct']);
         } else {
-            if (session()->get('answer') < intval($request->answer)) {
+            if ($_SESSION['answer'] < intval($request->answer)) {
                 return response()->json(['msg' => 'Lower']);
             } else {
                 return response()->json(['msg' => 'Higher']);
             }
-
         }
     }
 
+    // Function for when the user has beaten the game
     public function sendGuess(Request $request)
     {
-        $user = session()->get('user');
+        session_start();
+        $user = $_SESSION['user'];
         $user->guesses = $request->guesses;
         $user->seconds_to_beat = $request->seconds;
-        $user->answer = session()->get('answer');
+        $user->answer = $_SESSION['answer'];
         $user->save();
         return response()->json(['Score has been saved']);
     }

@@ -24,7 +24,7 @@
             <span class="timer">time elapsed: {{ timeElapsed }}s</span>
             <span class="timer">time left: {{ gameData.seconds }}s</span>
         </div>
-        <button class="quit-btn btn btn-danger mt-4" @click="$router.go(-1)">
+        <button class="quit-btn btn btn-danger mt-4" @click="goBack()">
             Quit & exit
         </button>
     </div>
@@ -57,11 +57,20 @@ export default {
     },
 
     created() {
-        gamedataApi.getUsers().then((res) => {
+        gamedataApi.getSession().then((res) => {
             if (!res.data.signed_in) {
                 router.push("/");
             } else if (res.data.userData) {
-                this.gameData = res.data.userData;
+                this.gameData = res.data.userData;   
+                // Check if the game timer && time elapsed values are present in local storage
+                const gameTimer = localStorage.getItem('gameTimer');
+                const elapsedTime = localStorage.getItem('timeElapsed');
+                if (gameTimer) {
+                    // Set values to the stored values
+                    this.gameData.seconds = gameTimer;
+                    this.timeElapsed = parseInt(elapsedTime);
+                }
+                localStorage.clear();    
             }
         });
     },
@@ -80,14 +89,30 @@ export default {
                 );
             });
         });
+
+        // handles timer logic
         gametimer = setInterval(() => {
             this.gameData.seconds -= 1;
             this.timeElapsed += 1;
             if (this.gameData.seconds === 0) {
                 clearInterval(gametimer);
                 $(".lostmodal").modal("show");
+                gamedataApi.clearSession();
             }
         }, 1000);
+    
+        // sets timer before refreshing/leaving page
+         window.addEventListener('beforeunload', (event) => {
+            // Save the current game timer value in local storage
+            localStorage.setItem('gameTimer', this.gameData.seconds);
+            localStorage.setItem('timeElapsed', this.timeElapsed);
+            // Cancel the default event action to show the confirm dialog box
+            event.preventDefault();
+        });
+    },
+
+    beforeUnmount(){
+        localStorage.clear();
     },
 
     methods: {
@@ -110,7 +135,6 @@ export default {
                 } else {
                     gamedataApi.guess(this.guessedNumber).then((res) => {
                         if (res.data.msg === "Correct") {
-                            console.log(gametimer);
                             clearInterval(gametimer);
                             $(".wonmodal").modal("show");
                             let obj = {
@@ -128,6 +152,15 @@ export default {
                 }
             }
         },
+
+        goBack() {
+            gamedataApi.clearSession();
+            this.$router.go(-1);
+        },
+
+        clearTimer() {
+            gamedataApi.updateTimer({ time: this.gameData.seconds });
+        }
     },
 };
 </script>
