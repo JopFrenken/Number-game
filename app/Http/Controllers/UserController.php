@@ -12,11 +12,25 @@ class UserController extends Controller
     public function get() : JsonResponse
     {
         $users = User::where('won', 1)->get();
-        $orderedUsers = $users->sortBy(function ($user) {
-            return $user->seconds_to_beat * $user->guesses;
-        });
+
+        // Define the weight for each metric (guesses and time)
+        $guessesWeight = 0.5;
+        $timeWeight = 0.5;
+
+        // Calculate the score for each user based on their guesses and time
+        $orderedUsers = $users->map(function ($user) use ($guessesWeight, $timeWeight) {
+            $score = ($guessesWeight * $user->guesses) + ($timeWeight * $user->seconds_to_beat);
+            return [
+                'user' => $user,
+                'score' => $score,
+            ];
+        })
+            ->sortBy('score')
+            ->pluck('user');
+
         return response()->json(['users' => $orderedUsers]);
     }
+
 
     // Check if the user is signed in + sets the game data
     public function getSession()

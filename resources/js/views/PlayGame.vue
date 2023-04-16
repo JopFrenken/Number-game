@@ -63,14 +63,15 @@ export default {
             } else if (res.data.userData) {
                 this.gameData = res.data.userData;   
                 // Check if the game timer && time elapsed values are present in local storage
-                const gameTimer = localStorage.getItem('gameTimer');
-                const elapsedTime = localStorage.getItem('timeElapsed');
-                if (gameTimer) {
+                const gameTimer = parseInt(localStorage.getItem('gameTimer'));
+                const elapsedTime = parseInt(localStorage.getItem('timeElapsed'));
+                console.log(gameTimer, elapsedTime);
+                if (!isNaN(gameTimer) && !isNaN(elapsedTime)) {
                     // Set values to the stored values
                     this.gameData.seconds = gameTimer;
-                    this.timeElapsed = parseInt(elapsedTime);
+                    this.timeElapsed = elapsedTime;
                 }
-                localStorage.clear();    
+                localStorage.clear();   
             }
         });
     },
@@ -94,7 +95,7 @@ export default {
         gametimer = setInterval(() => {
             this.gameData.seconds -= 1;
             this.timeElapsed += 1;
-            if (this.gameData.seconds === 0) {
+            if (this.gameData.seconds === 0 ) {
                 clearInterval(gametimer);
                 $(".lostmodal").modal("show");
                 gamedataApi.clearSession();
